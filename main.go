@@ -31,7 +31,7 @@ func createToken(path string, ttlMinutes int) string {
         Key:    aws.String(path[separatorIndex+1:]),
     })
 
-    urlStr, err := req.Presign(15 * time.Minute)
+    urlStr, err := req.Presign(time.Duration(ttlMinutes))
 	if err != nil {
 		log.Println("Failed to sign request", err)
 		return "signing_failed"
@@ -70,21 +70,23 @@ func createTokenEndpoint(w http.ResponseWriter, r *http.Request) {
 	log.Printf("Created token for %s", s3Path)
 }
 
+func pingPongEndpoint(w http.ResponseWriter, r *http.Request) {
+	fmt.Fprintf(w, "pong")
+}
+
 func main() {
 	// Create S3 service client
 	sess, _ := session.NewSession(&aws.Config{
         Region: aws.String("us-east-1"),
 	})
-
-    // Create S3 service client
     s3Client = s3.New(sess)
 
-	http.HandleFunc("/ping", func(w http.ResponseWriter, r *http.Request){
-        fmt.Fprintf(w, "pong")
-    })
-
+	// Register endpoints
+	http.HandleFunc("/ping", pingPongEndpoint)
     http.HandleFunc("/s3/sign", createTokenEndpoint)
 
+	// Start server
 	fmt.Printf("Server is running on port %d\n", PORT)
-    log.Fatal(http.ListenAndServe(":8080", nil))
+	err := http.ListenAndServe(fmt.Sprintf(":%d", PORT), nil)
+    log.Fatal(err)
 }

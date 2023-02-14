@@ -1,0 +1,3 @@
+### Test requests to use with VSCode REST Client extension
+
+http://localhost:8080/s3/sign?s3=a/b&ttl=10
