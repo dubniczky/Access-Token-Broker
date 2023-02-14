@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -16,33 +17,56 @@ const PORT = 8080
 var s3Client *s3.S3
 
 
-func createToken(w http.ResponseWriter, r *http.Request) {
-	query := r.URL.Query()
-
-	// Get the token from the query
-	s3Path := query.Get("s3")
-	separatorIndex := strings.Index(s3Path, "/")
+func createToken(path string, ttlMinutes int) string {
+	separatorIndex := strings.Index(path, "/")
 
 	// Check if path seems to be valid
-	if separatorIndex == -1 || separatorIndex == 0 || separatorIndex == len(s3Path) - 1 {
+	if separatorIndex == -1 || separatorIndex == 0 || separatorIndex == len(path) - 1 {
 		log.Println("Invalid S3 path")
-		fmt.Fprintf(w, "Invalid S3 path")
-		return
+		return "invalid_path"
 	}
 
 	req, _ := s3Client.GetObjectRequest(&s3.GetObjectInput{
-        Bucket: aws.String(s3Path[:separatorIndex]),
-        Key:    aws.String(s3Path[separatorIndex+1:]),
+        Bucket: aws.String(path[:separatorIndex]),
+        Key:    aws.String(path[separatorIndex+1:]),
     })
 
     urlStr, err := req.Presign(15 * time.Minute)
 	if err != nil {
 		log.Println("Failed to sign request", err)
-		fmt.Fprintf(w, "Failed to sign request")
+		return "signing_failed"
+	}
+
+	return urlStr
+}
+
+func createTokenEndpoint(w http.ResponseWriter, r *http.Request) {
+	query := r.URL.Query()
+
+	// Get the parameters
+	s3Path := query.Get("s3")
+	ttlMinutes := query.Get("ttl")
+
+	// Check if parameters are valid
+	if s3Path == "" {
+		log.Println("Missing path parameter")
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, "missing_s3_path")
 		return
 	}
 
-	fmt.Fprintf(w, "%s", urlStr)
+	// Convert ttlMinutes to int
+	ttlMinutesInt, err := strconv.Atoi(ttlMinutes)
+	if err != nil {
+		log.Println("Failed to convert to int:", ttlMinutes)
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, "invalid_ttl")
+		return
+	}
+	
+	response := createToken(s3Path, ttlMinutesInt)
+
+	fmt.Fprintf(w, "%s", response)
 	log.Printf("Created token for %s", s3Path)
 }
 
@@ -59,7 +83,7 @@ func main() {
         fmt.Fprintf(w, "pong")
     })
 
-    http.HandleFunc("/token/create", createToken)
+    http.HandleFunc("/s3/sign", createTokenEndpoint)
 
 	fmt.Printf("Server is running on port %d\n", PORT)
     log.Fatal(http.ListenAndServe(":8080", nil))
