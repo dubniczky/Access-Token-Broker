@@ -4,8 +4,13 @@ main = main.go
 start::
 	go run $(main)
 
-dev::
+# Start the server in development mode (restart on file changes)
+dev:: node_modules
 	npx nodemon \
 		--watch './**/*.go' \
 		--signal SIGTERM \
 		--exec 'go' run $(main)
+
+# Install node modules
+node_modules:
+	npm install

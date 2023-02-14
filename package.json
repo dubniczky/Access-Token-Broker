@@ -1,0 +1,9 @@
+{
+  "name": "access-token-service",
+  "version": "1.0.0",
+  "description": "Developer packages for the go project",
+  "license": "UNLICENSED",
+  "devDependencies": {
+    "nodemon": "^2.0.20"
+  }
+}
