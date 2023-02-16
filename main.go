@@ -13,7 +13,9 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3"
 )
 
-const PORT = 8080
+
+const configPath = "config.yaml"
+var config *Config
 var s3Client *s3.S3
 
 
@@ -75,9 +77,16 @@ func pingPongEndpoint(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
+	var err error
+
+	config, err = LoadConfig(configPath)
+    if err != nil {
+        log.Fatal(err)
+    }
+
 	// Create S3 service client
 	sess, _ := session.NewSession(&aws.Config{
-        Region: aws.String("us-east-1"),
+        Region: aws.String(config.S3.BucketRegion),
 	})
     s3Client = s3.New(sess)
 
@@ -86,7 +95,7 @@ func main() {
     http.HandleFunc("/s3/sign", createTokenEndpoint)
 
 	// Start server
-	fmt.Printf("Server is running on port %d\n", PORT)
-	err := http.ListenAndServe(fmt.Sprintf(":%d", PORT), nil)
+	fmt.Printf("Server is running on port %d\n", config.Server.Port)
+	err = http.ListenAndServe(fmt.Sprintf(":%d", config.Server.Port), nil)
     log.Fatal(err)
 }

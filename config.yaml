@@ -1,0 +1,5 @@
+server:
+  port: 8080
+
+s3:
+  bucket_region: us-east-1
