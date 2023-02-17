@@ -1,5 +1,5 @@
 {
-  "name": "access-token-service",
+  "name": "access-token-broker",
   "version": "1.0.0",
   "description": "Developer packages for the go project",
   "license": "UNLICENSED",

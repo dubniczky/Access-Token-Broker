@@ -1,4 +1,4 @@
-main = ats
+main = atb
 config = config.yaml
 out_dir = bin
 
